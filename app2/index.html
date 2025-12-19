@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>旅遊分帳 - Dark Mode</title>
+    <style>
+        :root {
+            /* 顏色變數 - 依照圖片吸色 */
+            --bg-color: #121212;       /* 整體背景全黑/深灰 */
+            --card-bg: #1E1E1E;        /* 卡片背景 */
+            --input-bg: #2C2C2C;       /* 輸入框背景 */
+            --primary: #2563EB;        /* 亮藍色按鈕 */
+            --primary-hover: #1d4ed8;
+            --text-main: #FFFFFF;      /* 主文字白 */
+            --text-sub: #A1A1AA;       /* 次要文字灰 */
+            --border: #333333;         /* 邊框 */
+            --green: #10B981;
+            --red: #EF4444;
+            --danger-bg: #2a1515;      /* 紅色按鈕背景淡色 */
+        }
+
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* App-like layout */
+        }
+
+        /* --- 佈局架構 --- */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            width: 100vw;
+            max-width: 600px; /* 電腦版限制寬度比較好看 */
+            margin: 0 auto;
+            background-color: var(--bg-color);
+        }
+
+        /* 內容捲動區 */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            padding-bottom: 100px; /* 避開底部導航 */
+        }
+
+        /* 隱藏頁面切換 */
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- UI 元件樣式 --- */
+
+        /* 標題區 */
+        .header-section {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        .header-title h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .header-title p { margin: 5px 0 0; color: var(--text-sub); font-size: 14px; }
+        .total-expense { text-align: right; }
+        .total-expense small { display: block; color: var(--text-sub); font-size: 12px; }
+        .total-expense span { font-size: 20px; font-weight: 700; color: #60A5FA; }
+
+        /* 卡片 */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 輸入框群組 */
+        .input-group {
+            background-color: var(--input-bg);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            border: 1px solid transparent;
+        }
+        .input-group:focus-within { border-color: var(--primary); }
+        
+        .input-label { color: var(--text-sub); margin-right: 10px; font-size: 14px; }
+        
+        input, select {
+            background: transparent; border: none; color: white;
+            font-size: 16px; width: 100%; outline: none; appearance: none;
+        }
+        ::placeholder { color: #555; }
+
+        /* 兩欄排列 */
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+
+        /* 主按鈕 */
+        .btn-primary {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary:active { transform: scale(0.98); background-color: var(--primary-hover); }
+
+        /* 列表樣式 */
+        .list-header {
+            display: flex; justify-content: space-between;
+            color: var(--text-sub); font-size: 14px; margin-bottom: 10px;
+        }
+        
+        .expense-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .expense-item:last-child { border-bottom: none; }
+
+        .expense-icon {
+            width: 40px; height: 40px;
+            background-color: #333;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        .expense-info h4 { margin: 0; font-size: 16px; color: white; }
+        .expense-info p { margin: 4px 0 0; font-size: 13px; color: #60A5FA; } /* 藍色字體標示付款人 */
+        
+        .expense-amount { font-size: 16px; font-weight: 600; color: white; }
+
+        /* 結算頁面樣式 */
+        .overview-card {
+            background-color: #1E293B; /* 稍微帶藍的深灰 */
+            border: 1px solid #334155;
+        }
+        .overview-grid { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .overview-item h3 { margin: 0 0 5px; color: var(--text-sub); font-size: 12px; }
+        .overview-item p { margin: 0; font-size: 24px; font-weight: 700; }
+
+        .settle-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0; border-bottom: 1px solid #333;
+        }
+        .settle-arrow { color: var(--text-sub); font-size: 14px; margin: 0 8px; }
+        .settle-amount { font-weight: 700; color: white; }
+        .settle-check { color: var(--text-sub); } /* 勾選圈圈 */
+
+        /* 成員列表 */
+        .member-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 0;
+        }
+        .avatar {
+            width: 36px; height: 36px;
+            background-color: #3B82F6;
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px;
+            margin-right: 12px;
+        }
+        .avatar.purple { background-color: #8B5CF6; }
+        .avatar.pink { background-color: #EC4899; }
+
+        .btn-text { background: none; border: none; color: #60A5FA; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; padding: 10px 0; }
+        
+        /* 資料管理按鈕 */
+        .data-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .btn-secondary {
+            background-color: #27272A; color: white;
+            padding: 15px; border-radius: 12px; border: 1px solid #3F3F46;
+            text-align: center; cursor: pointer; font-size: 14px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .btn-secondary svg { width: 24px; height: 24px; stroke: #60A5FA; }
+
+        .btn-danger {
+            width: 100%; margin-top: 20px;
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px; border-radius: 10px;
+            font-weight: bold; cursor: pointer;
+        }
+
+        /* 底部導航 */
+        nav {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background-color: #000000; /* 全黑底部 */
+            border-top: 1px solid #222;
+            display: flex; justify-content: space-around;
+            padding: 10px 0;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nav-btn {
+            background: none; border: none; color: #555;
+            display: flex; flex-direction: column; align-items: center;
+            font-size: 10px; cursor: pointer; gap: 4px;
+        }
+        .nav-btn svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
+        .nav-btn.active { color: #60A5FA; }
+
+        /* 隱藏 Input */
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <main>
+        <div id="view-log" class="page active">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>記帳明細</h1>
+                    <p id="trip-title">2024 自助旅行</p>
+                </div>
+                <div class="total-expense">
+                    <small>總支出</small>
+                    <span id="header-total">$0</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; align-items:center; margin-bottom:15px; color:var(--primary);">
+                    <svg style="width:20px;height:20px;margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    <span style="font-weight:600;">新增支出</span>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="input-group">
+                            <span class="input-label">$</span>
+                            <input type="number" id="in-amount" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="input-group">
+                            <input type="text" id="in-desc" placeholder="項目 (如: 午餐)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="input-group">
+                            <input type="date" id="in-date">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="input-group">
+                            <select id="in-payer">
+                                <option value="" disabled selected>誰付的?</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="addExpense()">加入明細</button>
+            </div>
+
+            <div class="list-header">
+                <span>近期紀錄</span>
+                <span id="log-count">0 筆</span>
+            </div>
+            <div id="expense-list"></div>
+        </div>
+
+        <div id="view-settle" class="page">
+            <div class="header-section">
+                <div class="header-title">
+                    <h1>結算與設定</h1>
+                </div>
+            </div>
+
+            <div class="card overview-card">
+                <div style="color:#60A5FA; margin-bottom:15px; display:flex; align-items:center; gap:6px; font-weight:600;">
+                    <svg style="width:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    財務概況
+                </div>
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <h3>總支出</h3>
+                        <p style="color:white;" id="settle-total">$0</p>
+                    </div>
+                    <div class="overview-item" style="text-align:right;">
+                        <h3>人均支出</h3>
+                        <p style="color:#60A5FA;" id="settle-avg">$0</p>
+                    </div>
+                </div>
+                
+                <div style="border-top:1px solid #334155; padding-top:15px; margin-top:10px;">
+                    <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">建議轉帳 (結算)</div>
+                    <div id="settlement-list">
+                        <div style="text-align:center; color:#555; padding:10px;">無需轉帳</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-title" style="margin: 25px 0 10px;">
+                <h2 style="font-size:16px;">同行夥伴</h2>
+            </div>
+            <div class="card">
+                <div id="member-list"></div>
+                <button class="btn-text" onclick="addUser()">
+                    <svg style="width:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    新增夥伴
+                </button>
+            </div>
+
+            <div class="header-title" style="margin: 25px 0 10px;">
+                <h2 style="font-size:16px;">資料管理</h2>
+            </div>
+            
+            <div class="data-btns">
+                <div class="btn-secondary" onclick="exportJSON()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    匯出報表
+                </div>
+                <div class="btn-secondary" onclick="document.getElementById('file-upload').click()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    匯入資料
+                </div>
+                <input type="file" id="file-upload" class="hidden" accept=".json" onchange="importJSON(this)">
+            </div>
+
+            <button class="btn-danger" onclick="resetAll()">
+                <svg style="width:16px; vertical-align:middle; margin-right:5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                重置旅程資料
+            </button>
+        </div>
+    </main>
+
+    <nav>
+        <button class="nav-btn active" onclick="switchTab('log')">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+            記帳
+        </button>
+        <button class="nav-btn" onclick="switchTab('settle')">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            結算
+        </button>
+        <button class="nav-btn" onclick="switchTab('settle')"> <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            設定
+        </button>
+    </nav>
+</div>
+
+<script>
+    // --- Data Store ---
+    let data = { users: [], expenses: [] };
+    const safeStorage = {
+        get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
+        set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+    };
+
+    // --- Init ---
+    window.onload = () => {
+        const saved = safeStorage.get('trip_v7');
+        if (saved) data = saved;
+        
+        // 預設日期
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('in-date').value = today;
+        
+        // 如果沒有使用者，預設引導
+        if(data.users.length === 0) {
+            // 不自動加人，讓介面保持乾淨，顯示引導
+        }
+        
+        renderAll();
+    };
+
+    function save() {
+        safeStorage.set('trip_v7', data);
+        renderAll();
+    }
+
+    // --- Navigation ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`view-${tabId}`).classList.add('active');
+        
+        const navs = document.querySelectorAll('.nav-btn');
+        navs.forEach(n => n.classList.remove('active'));
+        
+        // 簡單對應：0=Log, 1=Settle, 2=Settings(Same as Settle)
+        if(tabId === 'log') navs[0].classList.add('active');
+        else { navs[1].classList.add('active'); navs[2].classList.add('active'); } // 讓設定和結算都亮起
+    }
+
+    // --- Core Functions ---
+    function renderAll() {
+        renderPayerSelect();
+        renderLogList();
+        renderStats();
+        renderSettlement();
+        renderMembers();
+    }
+
+    // 1. Members
+    function addUser() {
+        const name = prompt("請輸入夥伴名字:");
+        if (name) {
+            if (data.users.includes(name)) { alert("名字重複囉"); return; }
+            data.users.push(name);
+            save();
+        }
+    }
+
+    function removeUser(idx) {
+        if(confirm(`確定要移除 ${data.users[idx]} 嗎？(相關帳目可能會出錯)`)) {
+            data.users.splice(idx, 1);
+            save();
+        }
+    }
+
+    function renderMembers() {
+        const list = document.getElementById('member-list');
+        const colors = ['purple', 'pink', '', 'purple', 'pink']; // 隨機色
+        
+        if(data.users.length === 0) {
+            list.innerHTML = '<div style="color:#555; text-align:center; padding:10px;">尚無夥伴，請新增</div>';
+            return;
+        }
+
+        list.innerHTML = data.users.map((u, i) => `
+            <div class="member-item">
+                <div style="display:flex; align-items:center;">
+                    <div class="avatar ${colors[i%3]}">${u[0].toUpperCase()}</div>
+                    <span style="font-weight:600;">${u}</span>
+                </div>
+                <div style="cursor:pointer; color:#555;" onclick="removeUser(${i})">⋮</div>
+            </div>
+        `).join('');
+    }
+
+    function renderPayerSelect() {
+        const sel = document.getElementById('in-payer');
+        const current = sel.value;
+        sel.innerHTML = '<option value="" disabled selected>誰付的?</option>' + 
+            data.users.map(u => `<option value="${u}">${u}</option>`).join('');
+        if(data.users.includes(current)) sel.value = current;
+    }
+
+    // 2. Expenses
+    function addExpense() {
+        if(data.users.length === 0) return alert('請先到「結算與設定」頁面新增夥伴！');
+        
+        const date = document.getElementById('in-date').value;
+        const payer = document.getElementById('in-payer').value;
+        const amount = parseFloat(document.getElementById('in-amount').value);
+        const desc = document.getElementById('in-desc').value;
+
+        if(!payer || !amount || !desc) return alert('資料不完整喔');
+
+        data.expenses.push({ id: Date.now(), date, payer, amount, desc });
+        
+        // 清空
+        document.getElementById('in-amount').value = '';
+        document.getElementById('in-desc').value = '';
+        save();
+    }
+
+    function delExp(id) {
+        if(confirm('刪除此筆支出？')) {
+            data.expenses = data.expenses.filter(e => e.id !== id);
+            save();
+        }
+    }
+
+    function renderLogList() {
+        const list = document.getElementById('expense-list');
+        document.getElementById('log-count').textContent = data.expenses.length + " 筆";
+        
+        if(data.expenses.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#555; margin-top:20px;">還沒有記帳紀錄</div>';
+            return;
+        }
+
+        const sorted = [...data.expenses].sort((a,b) => b.id - a.id);
+        const icons = ['🍔','🚗','🎫','🛍️','🏠']; 
+
+        list.innerHTML = sorted.map((e, i) => `
+            <div class="expense-item">
+                <div style="display:flex; align-items:center;">
+                    <div class="expense-icon">${icons[i%5]}</div>
+                    <div class="expense-info">
+                        <h4>${e.desc}</h4>
+                        <p>${e.payer} 已付 • ${e.date}</p>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="expense-amount">$${e.amount}</div>
+                    <small style="color:#ef4444; font-size:10px; cursor:pointer;" onclick="delExp(${e.id})">刪除</small>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // 3. Stats & Settlement
+    function renderStats() {
+        const total = data.expenses.reduce((a,b) => a+b.amount, 0);
+        document.getElementById('header-total').textContent = "$" + total.toLocaleString();
+        document.getElementById('settle-total').textContent = "$" + total.toLocaleString();
+        
+        const avg = data.users.length ? total / data.users.length : 0;
+        document.getElementById('settle-avg').textContent = "$" + Math.round(avg).toLocaleString();
+    }
+
+    function renderSettlement() {
+        const div = document.getElementById('settlement-list');
+        if(data.users.length === 0) return;
+
+        let paid = {};
+        data.users.forEach(u => paid[u] = 0);
+        let total = 0;
+        data.expenses.forEach(e => {
+            if(paid[e.payer] !== undefined) {
+                paid[e.payer] += e.amount;
+                total += e.amount;
+            }
+        });
+
+        const avg = total / data.users.length;
+        let bals = data.users.map(u => ({ name: u, val: paid[u] - avg }));
+        
+        let debtors = bals.filter(b => b.val < -0.1).sort((a,b) => a.val - b.val);
+        let creditors = bals.filter(b => b.val > 0.1).sort((a,b) => b.val - a.val);
+        
+        let html = '';
+        while(debtors.length && creditors.length) {
+            let d = debtors[0], c = creditors[0];
+            let amt = Math.min(Math.abs(d.val), c.val);
+            
+            html += `
+            <div class="settle-item">
+                <span style="color:white; font-weight:600;">${d.name}</span>
+                <span class="settle-arrow">➔</span>
+                <span style="color:white; font-weight:600;">${c.name}</span>
+                <span class="settle-amount">$${Math.round(amt)}</span>
+            </div>`;
+            
+            d.val += amt; c.val -= amt;
+            if(Math.abs(d.val) < 0.1) debtors.shift();
+            if(c.val < 0.1) creditors.shift();
+        }
+        
+        div.innerHTML = html || '<div style="text-align:center; color:#555; padding:10px;">帳目已平 🎉</div>';
+    }
+
+    // 4. Data Mgmt
+    function resetAll() {
+        if(confirm('警告：這將刪除所有資料！')) {
+            data = { users: [], expenses: [] };
+            save();
+        }
+    }
+    function exportJSON() {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type:'application/json'}));
+        a.download = 'trip_data.json'; a.click();
+    }
+    function importJSON(input) {
+        const f = input.files[0]; if(!f) return;
+        const r = new FileReader();
+        r.onload = (e) => {
+            try { data = JSON.parse(e.target.result); save(); alert('匯入成功'); }
+            catch(err) { alert('格式錯誤'); }
+        };
+        r.readAsText(f);
+    }
+</script>
+</body>
+</html>
