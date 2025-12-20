@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旅遊分帳 Pro</title>
+    <style>
+        :root {
+            /* 深色主題配色 (參考圖片) */
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-light: #2c2c2c;
+            --primary-color: #3b82f6; /* 亮藍色 */
+            --primary-hover: #2563eb;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #3f3f46;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 90px; /* 預留底部導航空間 */
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- Header --- */
+        .header {
+            background-color: var(--surface-color);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+            height: 24px;
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: none; /* 預設隱藏 */
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* --- Layout --- */
+        .container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Cards & Inputs --- */
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h2, h3 { margin-top: 0; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 15px; }
+        
+        .section-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Modern Inputs */
+        .input-group {
+            background-color: var(--surface-light);
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+        }
+        .input-group:focus-within { border-color: var(--primary-color); }
+
+        input, select {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 12px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        /* Buttons */
+        button.btn-primary {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button.btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+
+        button.btn-outline {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button.btn-danger {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* --- List Items --- */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .list-item:last-child { border-bottom: none; }
+
+        .item-main { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .item-icon { 
+            width: 40px; height: 40px; 
+            background: var(--surface-light); 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .amount-display { font-weight: bold; font-size: 1.1rem; }
+        .sub-text { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
+
+        /* --- Group Cards (Home) --- */
+        .group-card {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: transform 0.1s;
+        }
+        .group-card:active { background: var(--surface-light); }
+
+        /* --- Toggle / Icons --- */
+        .exempt-toggle {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .exempt-toggle.active {
+            background: rgba(251, 191, 36, 0.1); /* Gold tint */
+            color: #fbbf24;
+            border-color: #fbbf24;
+        }
+
+        /* --- Bottom Nav --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            display: none; /* Hidden on Home */
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 90;
+        }
+        
+        .nav-items-wrapper { display: flex; height: 60px; }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .nav-item.active { color: var(--primary-color); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
+
+        /* --- Result Highlight --- */
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--accent-green);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <button class="back-btn" id="back-btn" onclick="exitGroup()">
+            ❮ 返回
+        </button>
+        <div class="header-title" id="header-title">旅遊群組</div>
+    </div>
+
+    <div id="page-home" class="page active container">
+        
+        <div class="card" style="background: linear-gradient(135deg, #1e3a8a 0%, #1e1e1e 100%); border:none;">
+            <h2 style="color:white; margin-bottom:5px;">新增新的旅程</h2>
+            <div style="color:#93c5fd; font-size:0.9rem; margin-bottom:15px;">輸入 日期_地點 快速建立新的分帳群組</div>
+            <div style="display:flex; gap:10px;">
+                <div class="input-group" style="margin-bottom:0; flex:1; background:rgba(255,255,255,0.1);">
+                    <input type="text" id="new-group-name" placeholder="例如: 2024_日本大阪">
+                </div>
+                <button class="btn-primary" style="width:auto; white-space:nowrap;" onclick="createGroup()">新增群組</button>
+            </div>
+        </div>
+
+        <div class="section-title">我的群組</div>
+        <div id="group-list">
+            </div>
+        <div id="empty-groups-msg" style="text-align:center; color:var(--text-secondary); margin-top:40px; display:none;">
+            目前沒有群組，快建立一個吧！
+        </div>
+    </div>
+
+    <div id="page-log" class="page container">
+        
+        <div class="card">
+            <h3 style="margin-bottom:15px;">⊕ 新增支出</h3>
+            <div style="display:flex; gap:10px;">
+                <div class="input-group" style="flex:1;">
+                    <input type="number" id="expense-amount" placeholder="$ 0.00" inputmode="numeric" style="font-size:1.2rem; font-weight:bold;">
+                </div>
+                <div class="input-group" style="flex:2;">
+                    <input type="text" id="expense-desc" placeholder="項目 (如: 午餐)">
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px;">
+                <div class="input-group" style="flex:1;">
+                    <input type="date" id="expense-date">
+                </div>
+                <div class="input-group" style="flex:1;">
+                    <select id="expense-payer">
+                        <option value="" disabled selected>誰付的?</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="addExpense()">加入明細</button>
+        </div>
+
+        <div class="section-title">明細紀錄</div>
+        <div id="expense-list"></div>
+    </div>
+
+    <div id="page-settings" class="page container">
+        
+        <div class="card" style="background: linear-gradient(180deg, var(--surface-color) 0%, #232323 100%);">
+            <h3>📊 財務概況</h3>
+            <div style="display:flex; justify-content: space-between; margin-bottom:20px;">
+                <div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">總支出</div>
+                    <div style="font-size:1.8rem; font-weight:bold; color:var(--text-primary);">$<span id="total-amount">0</span></div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.8rem; color:var(--text-secondary);">人均支出 (分母:<span id="split-count">0</span>人)</div>
+                    <div style="font-size:1.8rem; font-weight:bold; color:var(--primary-color);">$<span id="average-amount">0</span></div>
+                </div>
+            </div>
+
+            <div class="section-title">建議轉帳</div>
+            <div id="settlement-plan">
+                </div>
+        </div>
+
+        <div class="card">
+            <h3>同行夥伴</h3>
+            <div style="background:var(--surface-light); border-radius:8px; padding:4px; display:flex; gap:5px; margin-bottom:15px;">
+                <input type="text" id="new-user-name" placeholder="輸入名字新增..." style="padding:10px;">
+                <button class="btn-primary" style="width:auto; padding:5px 15px; margin:5px;" onclick="addUser()">＋</button>
+            </div>
+            <div id="user-list">
+                </div>
+            <div style="margin-top:10px; font-size:0.8rem; color:var(--text-secondary);">
+                * 點擊 <span style="color:#fbbf24">★ 免除均分</span> 表示該成員不參與費用分攤 (例如: 小孩或只負責代墊的人)
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>資料管理</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-outline" onclick="exportData()">
+                    📤 匯出群組資料
+                </button>
+                <button class="btn-outline" onclick="document.getElementById('import-file').click()">
+                    📥 匯入群組資料
+                </button>
+                <input type="file" id="import-file" style="display:none" onchange="importData(this)" accept=".json">
+            </div>
+            <button class="btn-danger" onclick="deleteCurrentGroup()">✖ 重置/刪除此旅程</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-items-wrapper">
+            <div class="nav-item active" onclick="switchAppPage('log')">
+                <span class="nav-icon">📝</span>
+                <span>記帳</span>
+            </div>
+            <div class="nav-item" onclick="switchAppPage('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span>結算</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 全域變數 =================
+        let groupList = JSON.parse(localStorage.getItem('split_app_groups_v2')) || [];
+        
+        // 當前群組資料
+        let currentGroupId = null;
+        // 注意：users 現在是物件陣列 [{name: 'A', isExempt: false}, ...]
+        let currentUsers = []; 
+        let currentExpenses = [];
+
+        // 初始化
+        renderGroupList();
+
+        // ================= 1. 首頁與群組管理 =================
+
+        function renderGroupList() {
+            const listEl = document.getElementById('group-list');
+            const emptyMsg = document.getElementById('empty-groups-msg');
+
+            if (groupList.length === 0) {
+                listEl.innerHTML = '';
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+
+            listEl.innerHTML = groupList.map(g => `
+                <div class="group-card" onclick="enterGroup('${g.id}', '${g.name}')">
+                    <div>
+                        <div style="font-weight:bold; font-size:1.1rem; color:white;">${g.name}</div>
+                        <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:5px;">
+                            ${new Date(g.createdAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div style="color:var(--primary-color);">進入 ❯</div>
+                </div>
+            `).join('');
+        }
+
+        function createGroup() {
+            const nameInput = document.getElementById('new-group-name');
+            const name = nameInput.value.trim();
+            if (!name) return alert('請輸入群組名稱');
+
+            const newId = 'group_' + Date.now();
+            const newGroup = { id: newId, name: name, createdAt: new Date().toISOString() };
+
+            groupList.unshift(newGroup);
+            localStorage.setItem('split_app_groups_v2', JSON.stringify(groupList));
+            
+            // 初始化資料
+            localStorage.setItem(`split_data_${newId}`, JSON.stringify({ users: [], expenses: [] }));
+
+            nameInput.value = '';
+            renderGroupList();
+        }
+
+        function deleteCurrentGroup() {
+            if (!confirm(`確定要刪除「${document.getElementById('header-title').innerText}」所有資料嗎？此動作無法復原。`)) return;
+            localStorage.removeItem(`split_data_${currentGroupId}`);
+            groupList = groupList.filter(g => g.id !== currentGroupId);
+            localStorage.setItem('split_app_groups_v2', JSON.stringify(groupList));
+            exitGroup();
+        }
+
+        // ================= 2. 導航邏輯 =================
+
+        function enterGroup(id, name) {
+            currentGroupId = id;
+            document.getElementById('header-title').innerText = name;
+            document.getElementById('back-btn').style.display = 'flex'; // 顯示返回鍵
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('bottom-nav').style.display = 'block';
+
+            // 讀取資料
+            const data = JSON.parse(localStorage.getItem(`split_data_${id}`)) || { users: [], expenses: [] };
+            
+            // **資料遷移檢查**: 如果舊資料是字串陣列，轉為物件陣列
+            if (data.users.length > 0 && typeof data.users[0] === 'string') {
+                currentUsers = data.users.map(name => ({ name: name, isExempt: false }));
+            } else {
+                currentUsers = data.users;
+            }
+            currentExpenses = data.expenses;
+
+            document.getElementById('expense-date').valueAsDate = new Date();
+            switchAppPage('log');
+            refreshAppUI();
+        }
+
+        function exitGroup() {
+            currentGroupId = null;
+            document.getElementById('header-title').innerText = '旅遊群組';
+            document.getElementById('back-btn').style.display = 'none';
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-home').classList.add('active');
+            document.getElementById('bottom-nav').style.display = 'none';
+            renderGroupList();
+        }
+
+        function switchAppPage(pageId) {
+            document.getElementById('page-log').classList.remove('active');
+            document.getElementById('page-settings').classList.remove('active');
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            
+            // Update Tab Style
+            const tabs = document.querySelectorAll('.nav-item');
+            tabs.forEach(t => t.classList.remove('active'));
+            if(pageId === 'log') tabs[0].classList.add('active');
+            else tabs[1].classList.add('active');
+        }
+
+        function saveCurrentGroupData() {
+            if (!currentGroupId) return;
+            const data = { users: currentUsers, expenses: currentExpenses };
+            localStorage.setItem(`split_data_${currentGroupId}`, JSON.stringify(data));
+        }
+
+        function refreshAppUI() {
+            renderUsers();
+            renderPayerOptions();
+            renderExpenses();
+            calculateSettlement();
+        }
+
+        // ================= 3. 成員管理 (含免除均分) =================
+
+        function addUser() {
+            const nameInput = document.getElementById('new-user-name');
+            const name = nameInput.value.trim();
+            if (!name) return alert('請輸入名字');
+            if (currentUsers.some(u => u.name === name)) return alert('名字重複囉');
+
+            currentUsers.push({ name: name, isExempt: false });
+            saveCurrentGroupData();
+            nameInput.value = '';
+            refreshAppUI();
+        }
+
+        function removeUser(index) {
+            const user = currentUsers[index];
+            if (currentExpenses.some(e => e.payer === user.name)) {
+                if(!confirm(`${user.name} 已經有付款紀錄，刪除會影響帳務。確定刪除？`)) return;
+            }
+            currentUsers.splice(index, 1);
+            saveCurrentGroupData();
+            refreshAppUI();
+        }
+
+        function toggleExempt(index) {
+            currentUsers[index].isExempt = !currentUsers[index].isExempt;
+            saveCurrentGroupData();
+            refreshAppUI(); // 重新渲染列表和重新計算
+        }
+
+        function renderUsers() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = currentUsers.map((u, i) => `
+                <div class="list-item">
+                    <div class="item-main">
+                        <div class="item-icon" style="background:${u.isExempt ? '#fbbf24' : '#3f3f46'}; color:${u.isExempt ? 'black' : 'white'}">
+                            ${u.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div style="font-weight:bold;">${u.name}</div>
+                            ${u.isExempt ? '<div style="font-size:0.75rem; color:#fbbf24;">不參與分攤</div>' : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div class="exempt-toggle ${u.isExempt ? 'active' : ''}" onclick="toggleExempt(${i})">
+                            ★ 免除均分
+                        </div>
+                        <button style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;" onclick="removeUser(${i})">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ================= 4. 記帳功能 =================
+
+        function addExpense() {
+            const date = document.getElementById('expense-date').value;
+            const desc = document.getElementById('expense-desc').value.trim();
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const payer = document.getElementById('expense-payer').value;
+
+            if (!date || !desc || isNaN(amount) || !payer) return alert('請填寫完整喔');
+
+            currentExpenses.push({
+                id: Date.now(),
+                date, desc, amount, payer
+            });
+            currentExpenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            saveCurrentGroupData();
+            
+            // Reset fields
+            document.getElementById('expense-desc').value = '';
+            document.getElementById('expense-amount').value = '';
+            
+            refreshAppUI();
+        }
+
+        function deleteExpense(id) {
+            if(!confirm('刪除這筆紀錄？')) return;
+            currentExpenses = currentExpenses.filter(e => e.id !== id);
+            saveCurrentGroupData();
+            refreshAppUI();
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expense-list');
+            if (currentExpenses.length === 0) return list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-secondary);">尚未新增任何支出</div>';
+            
+            let html = '', lastDate = '';
+            currentExpenses.forEach(e => {
+                if (e.date !== lastDate) {
+                    html += `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:15px; margin-bottom:5px;">${e.date}</div>`;
+                    lastDate = e.date;
+                }
+                html += `
+                <div class="list-item">
+                    <div class="item-main">
+                        <div class="item-icon">💰</div>
+                        <div>
+                            <div style="font-weight:500;">${e.desc}</div>
+                            <div class="sub-text">${e.payer} 先付</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="amount-display">$${e.amount}</div>
+                        <div style="font-size:1.5rem; color:#ef4444; cursor:pointer;" onclick="deleteExpense(${e.id})">×</div>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+
+        function renderPayerOptions() {
+            const select = document.getElementById('expense-payer');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="" disabled selected>誰先付錢?</option>' + 
+                currentUsers.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+            if(currentUsers.some(u => u.name === currentVal)) select.value = currentVal;
+        }
+
+        // ================= 5. 智慧結算 (含免除邏輯) =================
+
+        function calculateSettlement() {
+            if (currentUsers.length === 0) return;
+
+            // 1. 計算總支出
+            const total = currentExpenses.reduce((sum, e) => sum + e.amount, 0);
+            document.getElementById('total-amount').innerText = total.toLocaleString();
+
+            // 2. 找出參與分母的人 (排除 isExempt)
+            const activeUsers = currentUsers.filter(u => !u.isExempt);
+            const splitCount = activeUsers.length;
+            document.getElementById('split-count').innerText = splitCount;
+
+            const average = splitCount > 0 ? total / splitCount : 0;
+            document.getElementById('average-amount').innerText = Math.round(average).toLocaleString();
+
+            // 3. 計算每人餘額
+            let balances = {};
+            
+            // 初始化：有參與的人先扣掉平均值(欠錢)，免除的人從 0 開始
+            currentUsers.forEach(u => {
+                balances[u.name] = u.isExempt ? 0 : -average;
+            });
+
+            // 加上每人實際支付的金額
+            currentExpenses.forEach(e => {
+                if (balances[e.payer] !== undefined) {
+                    balances[e.payer] += e.amount;
+                }
+            });
+
+            // 4. 配對債權債務
+            let debtors = [], creditors = [];
+            for (let name in balances) {
+                let val = balances[name];
+                if (val < -0.01) debtors.push({ name, amount: val });
+                if (val > 0.01) creditors.push({ name, amount: val });
+            }
+
+            debtors.sort((a, b) => a.amount - b.amount);
+            creditors.sort((a, b) => b.amount - a.amount);
+
+            let resultHtml = '';
+            let i = 0, j = 0;
+
+            while (i < debtors.length && j < creditors.length) {
+                let debtor = debtors[i];
+                let creditor = creditors[j];
+                let amount = Math.min(Math.abs(debtor.amount), creditor.amount);
+
+                if (amount > 0.5) {
+                    resultHtml += `
+                    <div class="result-row">
+                        <span style="color:var(--text-primary)">${debtor.name} <span style="color:var(--text-secondary)">➜</span> ${creditor.name}</span>
+                        <span style="font-weight:bold; color:var(--accent-green);">$${Math.round(amount)}</span>
+                    </div>`;
+                }
+
+                debtor.amount += amount;
+                creditor.amount -= amount;
+                if (Math.abs(debtor.amount) < 0.01) i++;
+                if (creditor.amount < 0.01) j++;
+            }
+
+            if (!resultHtml) {
+                resultHtml = '<div style="text-align:center; color:var(--text-secondary); padding:10px;">目前帳目平衡，無須轉帳。</div>';
+            }
+            document.getElementById('settlement-plan').innerHTML = resultHtml;
+        }
+
+        // ================= 6. 匯出匯入 =================
+        function exportData() {
+            const groupName = document.getElementById('header-title').innerText;
+            const data = { groupName, users: currentUsers, expenses: currentExpenses };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${groupName}_備份.json`;
+            a.click();
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.users && data.expenses) {
+                        if(confirm('確定覆蓋此群組資料？')) {
+                            // 相容性處理
+                            if (data.users.length > 0 && typeof data.users[0] === 'string') {
+                                currentUsers = data.users.map(name => ({ name: name, isExempt: false }));
+                            } else {
+                                currentUsers = data.users;
+                            }
+                            currentExpenses = data.expenses;
+                            saveCurrentGroupData();
+                            refreshAppUI();
+                            alert('匯入成功！');
+                        }
+                    } else { alert('格式錯誤'); }
+                } catch (err) { alert('讀取失敗'); }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
